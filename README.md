@@ -326,7 +326,7 @@ Sources/Whiteout/
 * **DevOps & Web Hosting Consultant**:
   - (여기에 에이전트가 학습 사항을 기록합니다)
 * **Business Strategist**:
-  - (여기에 에이전트가 학습 사항을 기록합니다)
+  - [2026-07-07] 스마트 귀마개 dBud의 Flat Attenuation(균일 감쇄) 철학을 Whiteout의 GPU 감마 테이블 제어 기술에 대입하여, 화면의 선명도(대비)는 보존하고 눈부신 광원의 볼륨만 깎아내는 인지 부하 저감 중심의 국문 브랜드 카피를 설계함.
 * **Business Auditor & PM**:
   - [2026-06-30] macOS에 존재하지 않는 "흰색점 줄이기(Reduce White Point)" 기능을 재발견하여 iOS와의 차이를 검증하고, 이를 경쟁 제품군(BetterDisplay, Lunar 등) 분석에 연동하여 차별화된 영문 마케팅(극지 화이트아웃/설맹 서사) 및 타겟 포지셔닝(밤샘 개발자 중심) 전략을 수립함.
   - [2026-06-30] 에이전트들이 이전 의사결정 사항(Whiteout 명명 및 하드웨어 감마 테이블 등)을 일관성 있게 준수하며 개발할 수 있도록 AGENTS.md 행동 수칙 및 README.md 핵심 의사결정 이력(Key Decision Log) 자동화 연동을 설계 및 구현함.
