@@ -132,18 +132,24 @@ public class UpdateChecker: ObservableObject {
             return
         }
 
-        isDownloading    = true
-        downloadProgress = 0
+        DispatchQueue.main.async {
+            self.isDownloading    = true
+            self.downloadProgress = 0
+        }
 
         let task = URLSession.shared.downloadTask(with: zipURL) { [weak self] tempURL, _, error in
-            guard let self else { return }
+            guard let self = self else { return }
             self.progressObservation?.invalidate()
-            DispatchQueue.main.async { self.downloadProgress = 1.0 }
 
-            guard let tempURL, error == nil else {
-                DispatchQueue.main.async { self.isDownloading = false }
+            guard let tempURL = tempURL, error == nil else {
+                DispatchQueue.main.async {
+                    self.isDownloading = false
+                    self.openReleasePage()
+                }
                 return
             }
+
+            DispatchQueue.main.async { self.downloadProgress = 1.0 }
             self.installUpdate(from: tempURL)
         }
 
@@ -165,13 +171,23 @@ public class UpdateChecker: ObservableObject {
 
     private func installUpdate(from tempZip: URL) {
         let fm         = FileManager.default
-        let extractDir = URL(fileURLWithPath: NSTemporaryDirectory())
+        let extractDir = fm.temporaryDirectory
             .appendingPathComponent("WhiteOut_Update_\(UUID().uuidString)")
 
-        try? fm.createDirectory(at: extractDir, withIntermediateDirectories: true)
+        do {
+            try fm.createDirectory(at: extractDir, withIntermediateDirectories: true)
+        } catch {
+            DispatchQueue.main.async { self.isDownloading = false }
+            return
+        }
 
         let zipDest = extractDir.appendingPathComponent("update.zip")
-        try? fm.copyItem(at: tempZip, to: zipDest)
+        do {
+            try fm.copyItem(at: tempZip, to: zipDest)
+        } catch {
+            DispatchQueue.main.async { self.isDownloading = false }
+            return
+        }
 
         let unzip = Process()
         unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
@@ -190,37 +206,66 @@ public class UpdateChecker: ObservableObject {
             ? currentBundle
             : URL(fileURLWithPath: "/Applications/WhiteOut.app")
 
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+        let logPath = "/tmp/whiteout_updater.log"
+
         let script = """
         #!/bin/bash
-        sleep 2
+        exec > "\(logPath)" 2>&1
+        echo "=== WhiteOut Updater Started: $(date) ==="
+        echo "Waiting for process \(currentPID) to terminate..."
+
+        # 부모 프로세스 종료 대기 (최대 10초)
+        for i in {1..20}; do
+            if ! kill -0 \(currentPID) 2>/dev/null; then
+                echo "Parent process exited cleanly."
+                break
+            fi
+            sleep 0.5
+        done
+
+        # 확실한 종료 보장
+        kill -9 \(currentPID) 2>/dev/null || true
+        sleep 0.5
+
+        echo "Replacing old application at '\(destination.path)'..."
         rm -rf '\(destination.path)'
         cp -R '\(extractedApp.path)' '\(destination.path)'
         xattr -dr com.apple.quarantine '\(destination.path)' 2>/dev/null || true
+
+        echo "Relaunching updated application..."
         open '\(destination.path)'
+
+        echo "Cleaning up temporary files..."
         rm -rf '\(extractDir.path)'
+        echo "=== Update Successful: $(date) ==="
         """
 
-        let scriptPath = NSTemporaryDirectory() + "whiteout_updater.sh"
-        try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+        let scriptURL = fm.temporaryDirectory.appendingPathComponent("whiteout_updater_\(UUID().uuidString).sh")
+        do {
+            try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        } catch {
+            DispatchQueue.main.async { self.isDownloading = false }
+            return
+        }
 
         let chmod = Process()
         chmod.executableURL = URL(fileURLWithPath: "/bin/chmod")
-        chmod.arguments     = ["+x", scriptPath]
+        chmod.arguments     = ["+x", scriptURL.path]
         try? chmod.run()
         chmod.waitUntilExit()
 
-        // nohup으로 앱 프로세스 그룹과 완전히 분리하여 실행
-        // — 앱이 종료되어도 스크립트가 계속 실행되어 재실행까지 완료됨
+        // nohup과 백그라운드 서브쉘로 완전히 독립된 프로세스로 실행
         let launcher = Process()
-        launcher.executableURL = URL(fileURLWithPath: "/bin/sh")
-        launcher.arguments     = ["-c", "nohup /bin/sh '\(scriptPath)' > /dev/null 2>&1 &"]
+        launcher.executableURL = URL(fileURLWithPath: "/bin/bash")
+        launcher.arguments     = ["-c", "nohup /bin/bash '\(scriptURL.path)' > /dev/null 2>&1 &"]
         launcher.standardInput  = FileHandle.nullDevice
         launcher.standardOutput = FileHandle.nullDevice
         launcher.standardError  = FileHandle.nullDevice
         try? launcher.run()
         launcher.waitUntilExit()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApplication.shared.terminate(nil)
         }
     }
