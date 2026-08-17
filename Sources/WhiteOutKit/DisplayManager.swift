@@ -161,6 +161,8 @@ public class DisplayManager: ObservableObject {
     }
 
     private var timeRuleTimer: ClockTimer?
+    private var willTerminateObserver: NSObjectProtocol?
+    private var screenParamsObserver: NSObjectProtocol?
 
     private let tableSize = 256
     private var originalTables: [CGDirectDisplayID: GammaTable] = [:]
@@ -256,7 +258,7 @@ public class DisplayManager: ObservableObject {
         }
 
         // 앱 종료 시 원본 감마 복원
-        NotificationCenter.default.addObserver(
+        self.willTerminateObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification,
             object: nil,
             queue: .main
@@ -265,7 +267,7 @@ public class DisplayManager: ObservableObject {
         }
 
         // 모니터 연결/해제 시 디스플레이 구성 갱신
-        NotificationCenter.default.addObserver(
+        self.screenParamsObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
             queue: .main
@@ -288,6 +290,12 @@ public class DisplayManager: ObservableObject {
     deinit {
         timeRuleTimer?.invalidate()
         workspaceSubscription?.unsubscribe()
+        if let obs = willTerminateObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        if let obs = screenParamsObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
         restoreOriginalTables()
     }
 

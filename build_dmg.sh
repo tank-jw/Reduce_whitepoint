@@ -5,7 +5,7 @@ set -e
 
 APP_NAME="WhiteOut"
 BUNDLE_ID="com.tankjw.whiteout"
-VERSION="1.7.2.1"
+VERSION="1.7.3"
 DMG_NAME="${APP_NAME}.dmg"
 ZIP_NAME="${APP_NAME}.zip"
 BUILD_DIR=".build/release"
@@ -32,7 +32,7 @@ if [ -z "$ARM64_BIN" ] || [ -z "$X86_64_BIN" ]; then
   exit 1
 fi
 
-lipo -create -output .build/release/Whiteout "$ARM64_BIN" "$X86_64_BIN"
+lipo -create -output "${BUILD_DIR}/${APP_NAME}" "$ARM64_BIN" "$X86_64_BIN"
 
 echo "📦 .app 번들 구조 생성 중..."
 rm -rf "${APP_DIR}"
@@ -79,8 +79,6 @@ cat > "${APP_DIR}/Contents/Info.plist" << EOF
   <true/>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
-  <key>CFBundleIconFile</key>
-  <string>AppIcon</string>
 </dict>
 </plist>
 EOF

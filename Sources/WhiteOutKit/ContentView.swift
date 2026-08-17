@@ -21,7 +21,6 @@ public struct ContentView: View {
             get: { dm.reduction },
             set: { newVal in
                 dm.reduction = newVal
-                if dm.isEnabled { dm.applyReduction() }
             }
         )
     }
@@ -31,7 +30,6 @@ public struct ContentView: View {
             get: { dm.curveExponent },
             set: { newVal in
                 dm.curveExponent = newVal
-                if dm.isEnabled { dm.applyReduction() }
             }
         )
     }
